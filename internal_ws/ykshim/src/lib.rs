@@ -106,9 +106,9 @@ unsafe fn __ykshim_tirtrace_drop(tir_trace: *mut TirTrace) {
 
 /// Start an initialised StopgapInterpreter.
 #[no_mangle]
-unsafe extern "C" fn __ykshim_si_interpret(si: *mut yksg::StopgapInterpreter) {
+unsafe extern "C" fn __ykshim_si_interpret(si: *mut yksg::StopgapInterpreter) -> bool {
     let si = &mut *si;
-    si.interpret();
+    si.interpret()
 }
 
 #[no_mangle]

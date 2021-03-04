@@ -994,6 +994,16 @@ impl TraceCompiler {
             Statement::StorageDead(l) => self.local_dead(l)?,
             Statement::Call(target, args, dst) => self.c_call(target, args, dst)?,
             Statement::Cast(dst, src) => self.c_cast(dst, src),
+            Statement::LoopStart => {
+                dynasm!(self.asm
+                    ; ->loop_start:
+                );
+            }
+            Statement::LoopEnd => {
+                dynasm!(self.asm
+                    ; jmp ->loop_start
+                );
+            }
             Statement::Nop | Statement::Debug(..) => {}
             Statement::Unimplemented(s) => todo!("{:?}", s),
         }
@@ -1329,6 +1339,7 @@ impl TraceCompiler {
         let topalign = SYSV_CALL_STACK_ALIGN
             - (live_off + soff as usize + CALLEE_SAVED_REGS.len() * QWORD_REG_SIZE)
                 % SYSV_CALL_STACK_ALIGN;
+
         dynasm!(self.asm
             ; mov rax, 0 // Signifies that there were no guard failures.
             ; ->cleanup:

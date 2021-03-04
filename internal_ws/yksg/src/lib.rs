@@ -150,6 +150,7 @@ macro_rules! make_binop {
             let (v, of) = match op {
                 BinOp::Add => a.overflowing_add(b),
                 BinOp::Lt => ($type::from(a < b), false),
+                BinOp::Gt => ($type::from(a > b), false),
                 _ => todo!(),
             };
             if checked {
@@ -191,6 +192,8 @@ struct StackFrame {
 pub struct StopgapInterpreter {
     /// Active stack frames (most recent last).
     frames: Vec<StackFrame>,
+    /// Value to be returned by the interpreter.
+    rv: bool,
 }
 
 impl StopgapInterpreter {
@@ -199,6 +202,7 @@ impl StopgapInterpreter {
         let frame = StopgapInterpreter::create_frame(&sym);
         StopgapInterpreter {
             frames: vec![frame],
+            rv: true,
         }
     }
 
@@ -220,7 +224,7 @@ impl StopgapInterpreter {
             };
             frames.push(frame);
         }
-        let mut sg = StopgapInterpreter { frames };
+        let mut sg = StopgapInterpreter { frames, rv: true };
         let frame = sg.frames.last().unwrap();
         // Since we start in the block where the guard failed, we immediately skip to the
         // terminator and interpret it to initialise the block where actual interpretation needs to
@@ -276,7 +280,7 @@ impl StopgapInterpreter {
         std::ptr::write::<*mut u8>(ptr as *mut *mut u8, ctx);
     }
 
-    pub unsafe fn interpret(&mut self) {
+    pub unsafe fn interpret(&mut self) -> bool {
         while let Some(frame) = self.frames.last() {
             let body = frame.body.clone();
             let block = &body.blocks[usize::try_from(frame.bbidx).unwrap()];
@@ -296,11 +300,14 @@ impl StopgapInterpreter {
                     Statement::Unimplemented(_) | Statement::Debug(_) => todo!(),
                     Statement::Cast(..) => todo!(),
                     Statement::StorageLive(_) | Statement::StorageDead(_) => {}
-                    Statement::Call(..) => unreachable!(),
+                    Statement::Call(..) | Statement::LoopStart | Statement::LoopEnd => {
+                        unreachable!()
+                    }
                 }
             }
             self.terminator(&block.term);
         }
+        self.rv
     }
 
     unsafe fn terminator(&mut self, term: &Terminator) {
@@ -345,6 +352,11 @@ impl StopgapInterpreter {
                     let size = usize::try_from(SIR.ty(&dst.ty()).size()).unwrap();
                     std::ptr::copy(ret_ptr, dst_ptr, size);
                     curframe.bbidx = bbidx;
+                } else {
+                    // The return value of `interp_step` tells the meta-tracer whether to stop or
+                    // continue running the interpreter.
+                    let ret_ptr = oldframe.mem.local_ptr(&RETURN_LOCAL);
+                    self.rv = std::ptr::read::<bool>(ret_ptr as *const bool);
                 }
             }
             Terminator::SwitchInt {

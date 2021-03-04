@@ -50,7 +50,7 @@ extern "C" {
     fn __ykshim_compiled_trace_get_ptr(compiled_trace: *const RawCompiledTrace) -> *const c_void;
     fn __ykshim_compiled_trace_drop(compiled_trace: *mut RawCompiledTrace);
     fn __ykshim_sirtrace_drop(trace: *mut RawSirTrace);
-    fn __ykshim_si_interpret(interp: *mut RawStopgapInterpreter);
+    fn __ykshim_si_interpret(interp: *mut RawStopgapInterpreter) -> bool;
     fn __ykshim_sirinterpreter_drop(interp: *mut RawStopgapInterpreter);
 }
 
@@ -98,8 +98,8 @@ impl Drop for ThreadTracer {
 pub struct StopgapInterpreter(pub *mut RawStopgapInterpreter);
 
 impl StopgapInterpreter {
-    pub unsafe fn interpret(&mut self) {
-        __ykshim_si_interpret(self.0);
+    pub unsafe fn interpret(&mut self) -> bool {
+        __ykshim_si_interpret(self.0)
     }
 }
 
