@@ -2,8 +2,6 @@
 
 set -e
 
-YKRUSTC_REPO=https://github.com/softdevteam/ykrustc
-
 case ${CI_TRACER_KIND} in
     "sw" | "hw" ) true;;
     *) echo "CI_TRACER_KIND must be set to either 'hw' or 'sw'"
@@ -23,7 +21,7 @@ sh rustup.sh --default-host x86_64-unknown-linux-gnu \
 export PATH=${CARGO_HOME}/bin/:$PATH
 
 # Build the compiler and add it as a linked toolchain.
-git clone ${YKRUSTC_REPO}
+git clone https://github.com/softdevteam/ykrustc
 cd ykrustc
 cp .buildbot.config.toml config.toml
 ./x.py build --stage 1
