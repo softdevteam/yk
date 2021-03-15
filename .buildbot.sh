@@ -22,8 +22,8 @@ export PATH=${CARGO_HOME}/bin/:$PATH
 
 # Run rustfmt.
 # Note that xtask requires us to use a nightly toolchain for this step.
-cargo xtask fmt --all -- --check
 rustup toolchain install nightly --allow-downgrade --component rustfmt
+cargo xtask fmt --all -- --check
 
 # Build the compiler and add it as a linked toolchain.
 git clone https://github.com/softdevteam/ykrustc
