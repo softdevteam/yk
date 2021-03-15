@@ -20,6 +20,11 @@ sh rustup.sh --default-host x86_64-unknown-linux-gnu \
     -y
 export PATH=${CARGO_HOME}/bin/:$PATH
 
+# Run rustfmt.
+# Note that xtask requires us to use a nightly toolchain for this step.
+cargo xtask fmt --all -- --check
+rustup toolchain install nightly --allow-downgrade --component rustfmt
+
 # Build the compiler and add it as a linked toolchain.
 git clone https://github.com/softdevteam/ykrustc
 cd ykrustc
@@ -37,9 +42,3 @@ cargo xtask clean
 
 # Also test the build without xtask, as that's what consumers will do.
 cargo build
-
-# Run rustfmt.
-# Note that xtask requires us to use a nightly toolchain for this step.
-unset RUSTFLAGS
-rustup toolchain install nightly --allow-downgrade --component rustfmt
-cargo xtask fmt --all -- --check
