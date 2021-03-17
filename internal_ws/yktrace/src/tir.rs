@@ -51,6 +51,7 @@ impl<'a, 'm> TirTrace<'a, 'm> {
         let mut live_locals: Vec<HashSet<Local>> = Vec::new();
         let mut guard_blocks: Vec<GuardBlock> = Vec::new();
 
+        let mut loop_trace = false;
         let mut in_interp_step = false;
         let mut entered_call = false;
         while let Some(loc) = itr.next() {
@@ -153,10 +154,30 @@ impl<'a, 'm> TirTrace<'a, 'm> {
                             idx: rnm.rename_irplace(idx, &body),
                             scale: *scale,
                         },
-                        Statement::Store(dst, src) => Statement::Store(
-                            rnm.rename_irplace(dst, &body),
-                            rnm.rename_irplace(src, &body),
-                        ),
+                        Statement::Store(dst, src) => {
+                            if matches!(dst, IRPlace::Val { local, .. } if local == &sir::RETURN_LOCAL)
+                            {
+                                if body.flags.contains(BodyFlags::INTERP_STEP) {
+                                    match src {
+                                        IRPlace::Const { val: Constant::Bool(b), ..} => {
+                                            // If the `interp_step` function returns false, we
+                                            // enabled trace looping which loops the trace
+                                            // indefinitely until a guard fails.
+                                            if *b == false {
+                                                loop_trace = true;
+                                            }
+                                        }
+                                        _ => {
+                                            panic!("Return value of `interp_step` function must be a constant bool.")
+                                        }
+                                    }
+                                }
+                            }
+                            Statement::Store(
+                                rnm.rename_irplace(dst, &body),
+                                rnm.rename_irplace(src, &body),
+                            )
+                        }
                         Statement::BinaryOp {
                             dst,
                             op,
@@ -187,7 +208,9 @@ impl<'a, 'm> TirTrace<'a, 'm> {
                             Statement::StorageDead(l)
                         }
                         // The following statements are specific to TIR and cannot appear in SIR.
-                        Statement::Call(..) => unreachable!(),
+                        Statement::Call(..) | Statement::LoopStart | Statement::LoopEnd => {
+                            unreachable!()
+                        }
                     };
 
                     // In TIR, stores to local number zero are always to the return value of the
@@ -418,6 +441,11 @@ impl<'a, 'm> TirTrace<'a, 'm> {
         }
 
         let local_decls = rnm.done();
+
+        if loop_trace {
+            ops.insert(0, TirOp::Statement(Statement::LoopStart));
+            ops.push(TirOp::Statement(Statement::LoopEnd));
+        }
 
         Ok(Self {
             ops,

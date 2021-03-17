@@ -7,7 +7,7 @@ use ykshim_client::{start_tracing, TracingKind};
 
 // Some work to trace.
 #[interp_step]
-fn work(io: &mut InterpCtx) {
+fn work(io: &mut InterpCtx) -> bool {
     let mut res = 0;
     for i in 0..(io.0) {
         if i % 2 == 0 {
@@ -17,6 +17,7 @@ fn work(io: &mut InterpCtx) {
         }
     }
     println!("{}", res); // prevents the above from being optimised out.
+    true
 }
 
 struct InterpCtx(usize);

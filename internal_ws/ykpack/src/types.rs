@@ -492,6 +492,10 @@ pub enum Statement {
     /// Cast a value into another. Since the cast type and the destination type are the same, we
     /// only need the latter.
     Cast(IRPlace, IRPlace),
+    /// Marks the spot where we want the trace to loop.
+    LoopStart,
+    /// Jumps to the position marked by `LoopStart`.
+    LoopEnd,
     /// A debug marker. This does not appear in SIR.
     Debug(String),
     /// Any unimplemented lowering maps to this variant.
@@ -538,6 +542,8 @@ impl Display for Statement {
                 write!(f, "{} = call({}, [{}])", dst_s, op, args_s)
             }
             Statement::Cast(d, s) => write!(f, "Cast({}, {})", d, s),
+            Statement::LoopStart => write!(f, "LoopStart"),
+            Statement::LoopEnd => write!(f, "LoopEnd"),
             Statement::Debug(s) => write!(f, "// {}", s),
             Statement::Unimplemented(mir_stmt) => write!(f, "unimplemented_stmt: {}", mir_stmt),
         }

@@ -14,9 +14,10 @@ fn simple() {
 
     #[interp_step]
     #[inline(never)]
-    fn simple(io: &mut InterpCtx) {
+    fn simple(io: &mut InterpCtx) -> bool {
         let x = 13;
         io.0 = x;
+        true
     }
 
     #[cfg(tracermode = "hw")]
@@ -42,9 +43,10 @@ fn function_call_simple() {
 
     #[interp_step]
     #[inline(never)]
-    fn fcall(io: &mut InterpCtx) {
+    fn fcall(io: &mut InterpCtx) -> bool {
         io.0 = farg(13);
         let _z = farg(14);
+        true
     }
 
     let mut io = InterpCtx(0);
@@ -74,8 +76,9 @@ fn function_call_nested() {
     }
 
     #[interp_step]
-    fn fnested(io: &mut InterpCtx) {
+    fn fnested(io: &mut InterpCtx) -> bool {
         io.0 = fnested2(20);
+        true
     }
 
     let mut io = InterpCtx(0);
@@ -98,8 +101,9 @@ fn function_call_nested() {
 fn exec_call_symbol_no_args() {
     struct InterpCtx(u32);
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = unsafe { getuid() };
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -120,8 +124,9 @@ fn exec_call_symbol_no_args() {
 fn exec_call_symbol_with_arg() {
     struct InterpCtx(i32);
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = unsafe { abs(io.0) };
+        true
     }
 
     let mut ctx = InterpCtx(-56);
@@ -142,8 +147,9 @@ fn exec_call_symbol_with_arg() {
 fn exec_call_symbol_with_const_arg() {
     struct InterpCtx(i32);
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = unsafe { abs(-123) };
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -163,8 +169,9 @@ fn exec_call_symbol_with_const_arg() {
 fn exec_call_symbol_with_many_args() {
     struct InterpCtx(u64);
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = unsafe { add6(1, 2, 3, 4, 5, 6) };
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -185,8 +192,9 @@ fn exec_call_symbol_with_many_args() {
 fn exec_call_symbol_with_many_args_some_ignored() {
     struct InterpCtx(u64);
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = unsafe { add_some(1, 2, 3, 4, 5) };
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -208,7 +216,7 @@ fn ext_call_and_spilling() {
     struct InterpCtx(u64);
 
     #[interp_step]
-    fn ext_call(io: &mut InterpCtx) {
+    fn ext_call(io: &mut InterpCtx) -> bool {
         let a = 1;
         let b = 2;
         let c = 3;
@@ -218,6 +226,7 @@ fn ext_call_and_spilling() {
         // arguments are loaded from the stack.
         let expect = unsafe { add_some(a, b, c, d, e) };
         io.0 = expect;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -254,8 +263,9 @@ macro_rules! mk_binop_test {
                 }
 
                 #[interp_step]
-                fn interp_step(ctx: &mut BinopCtx) {
+                fn interp_step(ctx: &mut BinopCtx) -> bool {
                     ctx.res = ctx.arg1 $op ctx.arg2;
+                    true
                 }
 
                 let mut ctx = BinopCtx::new($arg1, $arg2, 0);
@@ -288,8 +298,9 @@ macro_rules! mk_binop_test {
                 }
 
                 #[interp_step]
-                fn interp_step(ctx: &mut BinopCtx) {
+                fn interp_step(ctx: &mut BinopCtx) -> bool {
                     ctx.res = $arg1 $op ctx.arg2;
+                    true
                 }
 
                 let mut ctx = BinopCtx::new($arg2, 0);
@@ -322,8 +333,9 @@ macro_rules! mk_binop_test {
                 }
 
                 #[interp_step]
-                fn interp_step(ctx: &mut BinopCtx) {
-                    ctx.res = ctx.arg1 $op $arg2
+                fn interp_step(ctx: &mut BinopCtx) -> bool {
+                    ctx.res = ctx.arg1 $op $arg2;
+                    true
                 }
 
                 let mut ctx = BinopCtx::new($arg1, 0);
@@ -426,8 +438,9 @@ fn binop_add_overflow() {
     struct InterpCtx(u8, u8);
 
     #[interp_step]
-    fn interp_stepx(io: &mut InterpCtx) {
+    fn interp_stepx(io: &mut InterpCtx) -> bool {
         io.1 = io.0 + 1;
+        true
     }
 
     let mut ctx = InterpCtx(254, 0);
@@ -456,9 +469,10 @@ fn binop_other() {
     struct InterpCtx(u64, u64, u64);
 
     #[interp_step]
-    fn interp_stepx(io: &mut InterpCtx) {
+    fn interp_stepx(io: &mut InterpCtx) -> bool {
         io.2 = io.0 * 3 - 5;
         io.1 = io.2 / 2;
+        true
     }
 
     let mut ctx = InterpCtx(5, 2, 0);
@@ -496,7 +510,7 @@ fn binop_many_locals() {
     }
 
     #[interp_step]
-    fn interp_step(ctx: &mut InterpCtx) {
+    fn interp_step(ctx: &mut InterpCtx) -> bool {
         // Make a lot of locals to fill many registers.
         let x1 = ctx.input + 1;
         let x2 = ctx.input + 2;
@@ -524,6 +538,7 @@ fn binop_many_locals() {
         ctx.x8 = x8;
         ctx.x9 = x9;
         ctx.x10 = x10;
+        true
     }
 
     let ctx = InterpCtx {
@@ -578,11 +593,12 @@ fn ref_deref_simple() {
     struct InterpCtx(u64);
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let mut x = 9;
         let y = &mut x;
         *y = 10;
         io.0 = *y;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -604,11 +620,12 @@ fn ref_deref_double() {
     struct InterpCtx(u64);
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let mut x = 9;
         let y = &mut &mut x;
         **y = 4;
         io.0 = x;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -630,11 +647,12 @@ fn ref_deref_double_and_field() {
     struct InterpCtx(u64);
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let five = 5;
         let mut s = (4u64, &five);
         let y = &mut s;
         io.0 = *y.1;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -655,7 +673,7 @@ fn ref_deref_stack() {
     struct InterpCtx(u64);
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let _a = 1;
         let _b = 2;
         let _c = 3;
@@ -666,7 +684,8 @@ fn ref_deref_stack() {
         let y = &mut x;
         *y = 10;
         let z = *y;
-        io.0 = z
+        io.0 = z;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -691,12 +710,13 @@ fn deref_stack_to_register() {
     }
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let _a = 1;
         let _b = 2;
         let _c = 3;
         let f = 6;
         io.0 = deref1(f);
+        true
     }
 
     struct InterpCtx(u64);
@@ -726,9 +746,10 @@ fn deref_register_to_stack() {
     }
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let f = 6;
         io.0 = deref2(f);
+        true
     }
 
     // This test dereferences a variable that lives on the stack and stores it in a register.
@@ -757,8 +778,9 @@ fn do_not_trace() {
     }
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = dont_trace_this(io.0);
+        true
     }
 
     let mut ctx = InterpCtx(1);
@@ -781,8 +803,9 @@ fn do_not_trace_stdlib() {
     struct InterpCtx<'a>(&'a mut Vec<u64>);
 
     #[interp_step]
-    fn dont_trace_stdlib(io: &mut InterpCtx) {
+    fn dont_trace_stdlib(io: &mut InterpCtx) -> bool {
         io.0.push(3);
+        true
     }
 
     let mut vec: Vec<u64> = Vec::new();
@@ -813,9 +836,10 @@ fn projection_chain() {
     }
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.1 = (io.0).1;
         io.3 = io.2.y;
+        true
     }
 
     let s = S { x: 5, y: 6 };
@@ -844,8 +868,9 @@ fn projection_lhs() {
     struct InterpCtx((u8, u8), u8);
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         (io.0).1 = io.1;
+        true
     }
 
     let t = (1u8, 2u8);
@@ -869,9 +894,10 @@ fn array() {
 
     #[interp_step]
     #[inline(never)]
-    fn array(io: &mut InterpCtx) {
+    fn array(io: &mut InterpCtx) -> bool {
         let z = io.0[1];
         io.1 = z;
+        true
     }
 
     let mut a = [3, 4, 5];
@@ -896,9 +922,10 @@ fn array_nested() {
 
     #[interp_step]
     #[inline(never)]
-    fn array(io: &mut InterpCtx) {
+    fn array(io: &mut InterpCtx) -> bool {
         let z = io.0[1][2];
         io.1 = z;
+        true
     }
 
     let mut a = [[3, 4, 5], [6, 7, 8]];
@@ -924,9 +951,10 @@ fn array_nested_mad() {
 
     #[interp_step]
     #[inline(never)]
-    fn array(io: &mut InterpCtx) {
+    fn array(io: &mut InterpCtx) -> bool {
         let z = io.0[2].0[2];
         io.1 = z;
+        true
     }
 
     let mut a = [S([3, 4, 5, 6]), S([7, 8, 9, 10]), S([11, 12, 13, 14])];
@@ -951,8 +979,9 @@ fn rhs_struct_ref_field() {
     struct InterpCtx(u8);
 
     #[interp_step]
-    fn add1(io: &mut InterpCtx) {
-        io.0 = io.0 + 1
+    fn add1(io: &mut InterpCtx) -> bool {
+        io.0 = io.0 + 1;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -975,8 +1004,9 @@ fn mut_lhs_struct_ref() {
     struct InterpCtx(u8);
 
     #[interp_step]
-    fn set100(io: &mut InterpCtx) {
+    fn set100(io: &mut InterpCtx) -> bool {
         io.0 = 100;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -1001,8 +1031,9 @@ fn place_larger_than_reg() {
     struct InterpCtx(S);
 
     #[interp_step]
-    fn ten(io: &mut InterpCtx) {
+    fn ten(io: &mut InterpCtx) -> bool {
         io.0 = S(10, 10, 10);
+        true
     }
 
     let mut ctx = InterpCtx(S(0, 0, 0));
@@ -1025,8 +1056,9 @@ fn array_slice_index() {
     struct InterpCtx<'a>(&'a [u8], u8);
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.1 = io.0[2];
+        true
     }
 
     let a = [1, 2, 3];
@@ -1049,8 +1081,9 @@ fn trim_junk() {
     struct InterpCtx(u8);
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 += 1;
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -1087,9 +1120,10 @@ fn comparison() {
     }
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let x = checks(io.0);
         io.1 = x;
+        true
     }
 
     let mut ctx = InterpCtx(0, false);
@@ -1118,9 +1152,10 @@ fn guard() {
     }
 
     #[interp_step]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         let x = guard(io.0);
         io.1 = x;
+        true
     }
 
     let mut ctx = InterpCtx(std::hint::black_box(|i| i)(0), 0);
@@ -1146,13 +1181,14 @@ fn matching() {
 
     #[interp_step]
     #[inline(never)]
-    fn matchthis(io: &mut InterpCtx) {
+    fn matchthis(io: &mut InterpCtx) -> bool {
         let x = match io.0 {
             1 => 2,
             2 => 3,
             _ => 0,
         };
         io.0 = x;
+        true
     }
 
     #[cfg(tracermode = "hw")]
@@ -1173,13 +1209,14 @@ fn cast() {
 
     #[interp_step]
     #[inline(never)]
-    fn matchthis(io: &mut InterpCtx) {
+    fn matchthis(io: &mut InterpCtx) -> bool {
         let y = match io.1 as char {
             'a' => 1,
             'b' => 2,
             _ => 3,
         };
         io.0 = y;
+        true
     }
 
     let mut io = InterpCtx(0, 97);
@@ -1205,8 +1242,9 @@ fn vec_add() {
 
     #[interp_step]
     #[inline(never)]
-    fn vec_add(io: &mut InterpCtx) {
+    fn vec_add(io: &mut InterpCtx) -> bool {
         io.cells[io.ptr] = io.cells[io.ptr].wrapping_add(1);
+        true
     }
 
     let cells = vec![0, 1, 2];
@@ -1243,8 +1281,9 @@ fn nested_do_not_trace() {
 
     #[interp_step]
     #[inline(never)]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = call_one();
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -1275,8 +1314,9 @@ fn recursive_do_not_trace() {
 
     #[interp_step]
     #[inline(never)]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = rec(1);
+        true
     }
 
     let mut ctx = InterpCtx(0);
@@ -1311,8 +1351,9 @@ fn mut_recursive_do_not_trace() {
 
     #[interp_step]
     #[inline(never)]
-    fn interp_step(io: &mut InterpCtx) {
+    fn interp_step(io: &mut InterpCtx) -> bool {
         io.0 = rec(1);
+        true
     }
 
     let mut ctx = InterpCtx(0);
